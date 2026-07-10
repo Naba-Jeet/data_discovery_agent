@@ -7,3 +7,5 @@ python-dotenv
 pydantic
 fastmcp
 sqlglot
+sentence-transformers
+pgvector

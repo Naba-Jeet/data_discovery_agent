@@ -13,12 +13,15 @@ app = FastAPI(title="Data Agent", version="0.1.0")
 
 
 # ── Request / Response models ─────────────────────────────────────────────────
-
 class ChatRequest(BaseModel):
     message: str
     pg_schema: str = "public"
-    target_table: str = ""     # for anomaly detection
-    target_column: str = ""    # for anomaly detection
+    target_table: str = ""
+    target_column: str = ""
+    rule_type: str = "null"
+    column_name: str = ""
+    parameters: str = "{}"
+    severity: str = "warn"
 
 
 class ChatResponse(BaseModel):
@@ -43,6 +46,10 @@ async def chat(req: ChatRequest):
             pg_schema=req.pg_schema,
             target_table=req.target_table,
             target_column=req.target_column,
+            rule_type=req.rule_type,
+            column_name=req.column_name,
+            parameters=req.parameters,
+            severity=req.severity,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

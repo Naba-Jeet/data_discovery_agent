@@ -15,3 +15,8 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
 # App
 APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
 APP_PORT = int(os.getenv("APP_PORT", 8000))
+
+MEMORY_DSN = os.getenv(
+    "MEMORY_DSN",
+    "postgresql://admin:admin123@localhost:5433/data_discovery"
+)

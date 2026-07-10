@@ -24,11 +24,25 @@ async def llm_node(state: dict[str, Any]) -> dict[str, Any]:
     schema_ctx   = state.get("schema_context", "")
 
     # nl_to_sql → use MCP tool (it already calls Ollama internally)
-    if intent in ("nl_to_sql", "schema", "anomaly"):
+    if intent in ("nl_to_sql", "schema", "anomaly", "dq"):
         if intent == "nl_to_sql":
+            schema_ctx = state.get("schema_context", "")
+            table_hints = []
+            for line in schema_ctx.splitlines():
+                if line.startswith("Table:"):
+                    table_hints.append(line.replace("Table:", "").strip())
+
+            enriched_question = user_message
+            if table_hints:
+                enriched_question += f"\n\nAvailable tables: {', '.join(table_hints)}"
+
+            similar_sql = state.get("similar_sql", "")
+            if similar_sql:
+                enriched_question += f"\n\n{similar_sql}"
+
             raw = await nl_to_sql(
                 schema_name=state.get("pg_schema", "public"),
-                question=user_message,
+                question=enriched_question,
             )
             state["llm_response"] = _parse_mcp_result(raw)
             return state
