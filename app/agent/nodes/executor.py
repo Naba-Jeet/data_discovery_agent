@@ -3,7 +3,12 @@ Executor node — calls MCP tools via SSE based on intent.
 """
 import re
 import json
-from mcp_client.client import run_query, detect_anomalies, nl_to_sql, get_schema, run_dq_checks, add_dq_rule, get_dq_rules
+from mcp_client.client import (
+    run_query, detect_anomalies, nl_to_sql, get_schema,
+    run_dq_checks, add_dq_rule, get_dq_rules,
+    detect_volume_anomalies,
+)
+from agent.intent import extract_granularity, extract_threshold, extract_grain_cols
 from typing import Any
 from memory.store import MemoryStore
 from config import MEMORY_DSN
@@ -113,6 +118,23 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
         else:
             print("DEBUG → run_dq_checks branch")
             raw = await run_dq_checks(pg_schema, table)
+            result = _parse_mcp_result(raw)
+            
+    elif intent == "volume_anomaly":
+        table       = state.get("target_table", "")
+        if not table:
+            result = {"error": "Could not determine table for volume anomaly detection."}
+        else:
+            granularity   = extract_granularity(user_message)
+            threshold_pct = extract_threshold(user_message)
+            grain_cols    = extract_grain_cols(user_message)
+            raw = await detect_volume_anomalies(
+                pg_schema,
+                table,
+                granularity=granularity,
+                threshold_pct=threshold_pct,
+                grain_cols=grain_cols,
+            )
             result = _parse_mcp_result(raw)
     else:
         result = {"info": "No tool execution needed for this intent."}

@@ -10,11 +10,12 @@ from tools.query_tools import query_remote_postgres
 from tools.anomaly_tools import detect_anomalies
 from tools.formatter import format_output
 from tools.nl_to_sql import nl_to_sql 
+from tools.volume_anomaly import detect_volume_anomalies
 
 load_dotenv()
 
 mcp = FastMCP(
-    name="data-agent-mcp", port = 8001, host = "0.0.0.0", debug = True
+    name="data-agent-mcp", port = 7001, host = "0.0.0.0", debug = True
 )
 
 # ── Register MCP Tools ──────────────────────────────────────
@@ -50,6 +51,19 @@ async def tool_nl_to_sql(schema_name: str, question: str) -> str:
     """Convert a natural language question to SQL using local LLM and schema context."""
     return await nl_to_sql(schema_name, question)
 
+@mcp.tool()
+async def tool_detect_volume_anomalies(
+    schema_name: str,
+    table_name: str,
+    granularity: str = "week",
+    threshold_pct: float = 30.0,
+    grain_cols: str = "",
+    date_col: str = "",
+) -> str:
+    """Detect volume trend anomalies (spikes/dips) and duplicates on a table."""
+    return await detect_volume_anomalies(
+        schema_name, table_name, granularity, threshold_pct, grain_cols, date_col
+    )
 # ── Run ─────────────────────────────────────────────────────
 
 if __name__ == "__main__":

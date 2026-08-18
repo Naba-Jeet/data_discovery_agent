@@ -83,3 +83,20 @@ async def get_dq_rules(schema_name: str, table_name: str) -> str:
         "schema_name": schema_name,
         "table_name": table_name,
     })
+
+async def detect_volume_anomalies(
+    schema_name: str,
+    table_name: str,
+    granularity: str = "week",
+    threshold_pct: float = 30.0,
+    grain_cols: str = "",
+    date_col: str = "",
+) -> str:
+    return await call_tool("tool_detect_volume_anomalies", {
+        "schema_name":   schema_name,
+        "table_name":    table_name,
+        "granularity":   granularity,
+        "threshold_pct": threshold_pct,
+        "grain_cols":    grain_cols,
+        "date_col":      date_col,
+    })
