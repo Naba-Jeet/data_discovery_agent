@@ -164,7 +164,7 @@ OLLAMA_MODEL=qwen2.5:1.5b
 
 **`app/.env`**
 ```env
-MCP_SERVER_URL=http://localhost:8001
+MCP_SERVER_URL=http://localhost:7001
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=qwen2.5:1.5b
 MEMORY_DSN=postgresql://postgres:your_password@localhost:5433/data_discovery
