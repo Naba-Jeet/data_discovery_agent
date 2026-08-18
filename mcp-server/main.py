@@ -19,6 +19,12 @@ mcp = FastMCP(
 
 # ── Register MCP Tools ──────────────────────────────────────
 
+from tools.dq_tools import tool_run_dq_checks, tool_add_dq_rule, tool_get_dq_rules
+
+mcp.add_tool(tool_run_dq_checks)
+mcp.add_tool(tool_add_dq_rule)
+mcp.add_tool(tool_get_dq_rules)
+
 @mcp.tool()
 async def tool_get_schema_metadata(schema_name: str) -> str:
     """Get all tables, columns, types and row counts for a schema."""

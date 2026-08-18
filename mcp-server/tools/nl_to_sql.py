@@ -88,7 +88,9 @@ async def nl_to_sql(schema_name: str, question: str) -> str:
         sql = extract_sql(raw.get("response", "").strip())
 
     # Step 4: auto-inject schema prefix for unqualified table names
+    all_columns = [c["name"] for meta in schema_data.values() for c in meta.get("columns", [])]
     sql = _qualify_tables(sql, schema_name, table_names)
+    sql = _fix_sql(sql, all_columns)
     sql, validation_error = _validate_and_fix_sql(sql, schema_name, table_names)
     if validation_error:
         print(f"WARNING validation: {validation_error}")
@@ -103,4 +105,20 @@ def _qualify_tables(sql: str, schema_name: str, table_names: list) -> str:
         for variant in variants:
             pattern = r'(?<!\.)(?<!\w)\b' + re.escape(variant) + r'\b'
             sql = re.sub(pattern, f"{schema_name}.{table}", sql, flags=re.IGNORECASE)
+    return sql
+
+def _fix_sql(sql: str, columns: list[str]) -> str:
+    """Fix common small-LLM SQL dialect mistakes."""
+    # MySQL → PostgreSQL date functions
+    sql = re.sub(r'\bYEAR\s*\(\s*(\w+)\s*\)', r'EXTRACT(YEAR FROM \1)', sql, flags=re.IGNORECASE)
+    sql = re.sub(r'\bMONTH\s*\(\s*(\w+)\s*\)', r'EXTRACT(MONTH FROM \1)', sql, flags=re.IGNORECASE)
+    sql = re.sub(r'\bDAY\s*\(\s*(\w+)\s*\)', r'EXTRACT(DAY FROM \1)', sql, flags=re.IGNORECASE)
+
+    # Fix hallucinated date column names
+    date_cols = [c for c in columns if "date" in c.lower()]
+    if date_cols:
+        real_date = date_cols[0]
+        for bad in ["salesorderdate", "sale_date", "order_date", "orderedddate"]:
+            sql = re.sub(rf'\b{bad}\b', real_date, sql, flags=re.IGNORECASE)
+
     return sql

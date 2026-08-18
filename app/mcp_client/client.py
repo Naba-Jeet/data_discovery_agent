@@ -4,6 +4,7 @@ using the proper MCP protocol (not plain HTTP REST).
 """
 from fastmcp import Client
 from fastmcp.client.transports import SSETransport
+
 from config import MCP_SERVER_URL
 
 
@@ -56,3 +57,29 @@ async def nl_to_sql(schema_name: str, question: str):
 
 async def format_output(data: str, fmt: str = "json"):
     return await call_tool("tool_format_output", {"data": data, "fmt": fmt})
+
+
+async def run_dq_checks(schema_name: str, table_name: str) -> str:
+    return await call_tool("tool_run_dq_checks", {
+        "schema_name": schema_name,
+        "table_name": table_name,
+    })
+
+
+async def add_dq_rule(schema_name: str, table_name: str, rule_type: str,
+                      column_name: str = "", parameters: str = "{}", severity: str = "warn") -> str:
+    return await call_tool("tool_add_dq_rule", {
+        "schema_name": schema_name,
+        "table_name": table_name,
+        "rule_type": rule_type,
+        "column_name": column_name,
+        "parameters": parameters,
+        "severity": severity,
+    })
+
+
+async def get_dq_rules(schema_name: str, table_name: str) -> str:
+    return await call_tool("tool_get_dq_rules", {
+        "schema_name": schema_name,
+        "table_name": table_name,
+    })
