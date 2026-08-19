@@ -36,7 +36,7 @@ _GRANULARITY_PATTERN = re.compile(
 _THRESHOLD_PATTERN = re.compile(r'(\d+)\s*%')
 
 _GRAIN_PATTERN = re.compile(
-    r'\b(?:by|grain|grouped?\s+by|on)\s+([\w,\s]+?)(?:\s+in|\s+from|\s+table|$)',
+    r'\b(?:by|grain\s+columns?|grain|grouped?\s+by|on\s+columns?)\s+([\w,\s]+?)(?:\s+in|\s+from|\s+table|on\b|$)',
     re.IGNORECASE
 )
 
