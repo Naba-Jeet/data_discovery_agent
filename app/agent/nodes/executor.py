@@ -16,6 +16,19 @@ import re
 
 _mem = MemoryStore(MEMORY_DSN)
 
+def _extract_granularity(message: str) -> str:
+    msg = message.lower()
+    if re.search(r"\b(daily|day)\b", msg):
+        return "day"
+    if re.search(r"\b(weekly|week)\b", msg):
+        return "week"
+    if re.search(r"\b(monthly|month)\b", msg):
+        return "month"
+    if re.search(r"\b(quarterly|quarter)\b", msg):
+        return "quarter"
+    if re.search(r"\b(yearly|annual|year)\b", msg):
+        return "month"   # fallback — no yearly in tool yet
+    return "week"  # default
 
 def _extract_sql(text: str) -> str:
     text = re.sub(r"(?:sql)?", "", text, flags=re.IGNORECASE).strip("`").strip()
@@ -119,7 +132,7 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
             print("DEBUG → run_dq_checks branch")
             raw = await run_dq_checks(pg_schema, table)
             result = _parse_mcp_result(raw)
-            
+
     elif intent == "volume_anomaly":
         table       = state.get("target_table", "")
         if not table:
