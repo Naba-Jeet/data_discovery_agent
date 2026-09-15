@@ -118,5 +118,5 @@ async def detect_row_anomaly(
         "threshold_pct":    threshold_pct,
     })
 
-async def run_databricks_query(sql: str, limit: int = 100):
-    return await call_tool("tool_query_databricks", {"query": sql, "limit": limit})
+async def run_databricks_query(sql: str, token: str, limit: int = 100):
+    return await call_tool("tool_query_databricks", {"query": sql, "token": token, "limit": limit})

@@ -13,6 +13,7 @@ from typing import Any
 from memory.store import MemoryStore
 from config import MEMORY_DSN
 from agent.intent import extract_frequency
+from mcp_client.client import run_query, run_databricks_query
 
 
 
@@ -60,6 +61,8 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
 
     result = {}
 
+    warehouse = state.get("warehouse", "postgres")
+
     if intent == "schema":
         raw = await get_schema(pg_schema)
         result = _parse_mcp_result(raw)
@@ -82,7 +85,12 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
             sql = llm_response  # fallback: treat as raw SQL
 
         sql = _extract_sql(sql)
-        raw = await run_query(sql)
+        
+        if warehouse == "databricks":
+            raw = await run_databricks_query(state["sql"], token=state.get("databricks_token", ""))
+        else:
+            raw = await run_query(state["sql"])
+
         result = _parse_mcp_result(raw)
         # Normalize if MCP returned a raw list of rows
         if isinstance(result, list):
@@ -100,7 +108,10 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
 
     elif intent == "query":
         sql = _extract_sql(user_message)
-        raw = await run_query(sql)
+        if warehouse == "databricks":
+            raw = await run_databricks_query(state["sql"])
+        else:
+            raw = await run_query(state["sql"])
         result = _parse_mcp_result(raw)
 
     elif intent == "anomaly":

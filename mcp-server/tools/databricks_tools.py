@@ -2,11 +2,10 @@ import os
 from databricks import sql
 
 DATABRICKS_HOST     = os.getenv("DATABRICKS_HOST")
-DATABRICKS_TOKEN    = os.getenv("DATABRICKS_TOKEN")
 DATABRICKS_HTTP_PATH = os.getenv("DATABRICKS_HTTP_PATH")
 
 
-def tool_query_databricks(query: str, limit: int = 100) -> dict:
+def tool_query_databricks(query: str, token: str, limit: int = 100) -> dict:
     """Execute a read-only SQL query against Databricks SQL Warehouse."""
     safe_query = query.rstrip(";")
     wrapped = f"SELECT * FROM ({safe_query}) _q LIMIT {limit}"
@@ -14,7 +13,7 @@ def tool_query_databricks(query: str, limit: int = 100) -> dict:
     with sql.connect(
         server_hostname=DATABRICKS_HOST.replace("https://", ""),
         http_path=DATABRICKS_HTTP_PATH,
-        access_token=DATABRICKS_TOKEN,
+        access_token=token,
     ) as conn:
         with conn.cursor() as cursor:
             cursor.execute(wrapped)

@@ -15,7 +15,8 @@ app = FastAPI(title="Data Agent", version="0.1.0")
 
 app.include_router(anomaly_column_router)
 app.include_router(anomaly_ts_router)
-# ── Request / Response models ─────────────────────────────────────────────────
+
+
 class ChatRequest(BaseModel):
     message: str
     pg_schema: str = "public"
@@ -25,6 +26,8 @@ class ChatRequest(BaseModel):
     column_name: str = ""
     parameters: str = "{}"
     severity: str = "warn"
+    warehouse: str = "postgres"
+    databricks_token: str = ""
 
 
 class ChatResponse(BaseModel):
@@ -71,6 +74,8 @@ async def chat(req: ChatRequest):
             column_name=req.column_name,
             parameters=req.parameters,
             severity=req.severity,
+            warehouse=req.warehouse,
+            databricks_token=req.databricks_token
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

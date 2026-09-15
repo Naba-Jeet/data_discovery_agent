@@ -41,6 +41,8 @@ class AgentState(TypedDict, total=False):
     column_name: str
     parameters: str
     severity: str
+    warehouse: str
+    databricks_token: str
 
 
 # ── Node wrappers ─────────────────────────────────────────────────────────────
@@ -98,6 +100,8 @@ async def run_agent(
     column_name: str = "",
     parameters: str = "{}",
     severity: str = "warn",
+    warehouse: str = "postgres",
+    databricks_token: str = ""
 ) -> dict[str, Any]:
     """Run the full agent pipeline and return the final state."""
 
@@ -114,6 +118,8 @@ async def run_agent(
         "column_name": column_name,
         "parameters": parameters,
         "severity": severity,
+        "warehouse": warehouse,
+        "databricks_token": databricks_token
     }
     final_state = await agent_graph.ainvoke(initial_state)
     return final_state
