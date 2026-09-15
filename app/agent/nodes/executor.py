@@ -73,23 +73,26 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
         sql = ""
         try:
             parsed = json.loads(llm_response)
-            sql = parsed.get("generated_sql", "")
-            if parsed.get("error"):
-                state["tool_result"] = {
-                    "error": parsed["error"],
-                    "generated_sql": parsed.get("generated_sql", ""),
-                    "sql": ""
-                }
-                return state
+            if isinstance(parsed, dict):
+                sql = parsed.get("generated_sql", "")
+                if parsed.get("error"):
+                    state["tool_result"] = {
+                        "error": parsed["error"],
+                        "generated_sql": parsed.get("generated_sql", ""),
+                        "sql": ""
+                    }
+                    return state
+            else:
+                sql = str(parsed)  # LLM returned plain SQL string
         except Exception:
-            sql = llm_response  # fallback: treat as raw SQL
+            sql = llm_response
 
         sql = _extract_sql(sql)
         
         if warehouse == "databricks":
             raw = await run_databricks_query(sql, token=state.get("databricks_token", ""))
         else:
-            raw = await run_query(state["sql"])
+            raw = await run_query(sql)
 
         result = _parse_mcp_result(raw)
         # Normalize if MCP returned a raw list of rows
@@ -111,7 +114,7 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
         if warehouse == "databricks":
             raw = await run_databricks_query(sql, token=state.get("databricks_token", ""))
         else:
-            raw = await run_query(state["sql"])
+            raw = await run_query(sql)
         result = _parse_mcp_result(raw)
 
     elif intent == "anomaly":
