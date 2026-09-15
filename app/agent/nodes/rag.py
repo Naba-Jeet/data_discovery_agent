@@ -24,9 +24,15 @@ async def rag_node(state: dict[str, Any]) -> dict[str, Any]:
     pg_schema   = state.get("pg_schema", "public")
     user_msg    = state.get("user_message", "")
     tgt_table   = state.get("target_table", "")
+    warehouse = state.get("warehouse", "postgres")
 
     schema_context = ""
     similar_sql    = ""
+
+    if warehouse != "postgres":                       # ← ADD THIS GUARD
+        state["schema_context"] = ""
+        state["similar_sql"] = ""
+        return state
 
     if intent in ("nl_to_sql", "schema", "query", "anomaly", "dq"):
 

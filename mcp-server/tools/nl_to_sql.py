@@ -56,6 +56,8 @@ async def nl_to_sql(schema_name: str, question: str) -> str:
         table_names = list(schema_data.keys())
         context_lines = []
         for table, meta in schema_data.items():
+            if not isinstance(meta, dict):   # ← ADD THIS GUARD
+                continue
             cols = meta.get("columns", [])
             col_defs = ", ".join(f"{c['name']}({c['type']})" for c in cols)
             context_lines.append(f"  {schema_name}.{table}: {col_defs}")

@@ -2,6 +2,8 @@
 FastAPI entry point for the data-agent app service.
 Exposes a single /chat endpoint that drives the LangGraph agent.
 """
+import logging
+logging.basicConfig(level=logging.DEBUG)
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from agent.orchestrator import run_agent
@@ -116,4 +118,4 @@ async def row_count_anomaly(req: RowAnomalyRequest):
     )
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host=APP_HOST, port=APP_PORT, reload=True)
+    uvicorn.run("main:app", host=APP_HOST, port=APP_PORT, reload=True, log_level="debug")

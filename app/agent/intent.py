@@ -14,15 +14,13 @@ import re
 
 _RULES = [
     ("volume_anomaly", r"\b(volume|trend|surge|spike|dip|drop|record.?count|row.?count|duplicates?\s+by|grain)\b"),
-    ("anomaly",        r"\b(anomal|outlier|unusual|drift|detect)\b"),
-    ("dq",        r"\b(dq|data.?quality|quality.?check|validate|null.?check|duplicates?|freshness|dq.?rule|add.?rule|list.?rules?|run.?checks?)\b"),
-    ("nl_to_sql", r"\b(how many|what is|list|find|give me|top \d+|average|count|sum|total)\b"),
-    ("query",     r"\b(run|execute|select|fetch|show me the data)\b"),
-    ("schema",    r"\b(schema|columns?|metadata|describe|structure)\b"),
-    ("row_anomaly", r"\b(row.?count|row.?anomaly|frequency|daily|weekly|monthly|quarterly|yearly|period.?count|count.?per|spike|dip|volume.?trend)\b"),
-    (r"explain|why|reason|insight|finding|interpret", "explain_anomaly"),
-    (r"anomal|outlier|spike|unusual|dip",             "anomaly"),
-
+    ("row_anomaly", r"\b(row.?count|row.?anomaly|frequency|daily|weekly|monthly|quarterly|yearly|period.?count|count.?per|volume.?trend)\b"),
+    ("anomaly", r"\b(anomal|outlier|unusual|drift|detect)\b"),
+    ("explain_anomaly", r"\b(explain|why|reason|insight|finding|interpret)\b"),
+    ("dq", r"\b(dq|data.?quality|quality.?check|validate|null.?check|duplicates?|freshness|dq.?rule|add.?rule|list.?rules?|run.?checks?)\b"),
+    ("nl_to_sql", r"\b(how many|what is|list|find|give me|show me|top \d+|average|count|sum|total)\b"),
+    ("query", r"\b(run|execute|select|fetch|display|get me|pull)\b"),
+    ("schema", r"\b(schema|columns?|metadata|describe|structure)\b"),
 ]
 
 _COMPILED = [(intent, re.compile(pattern, re.IGNORECASE)) for intent, pattern in _RULES]
