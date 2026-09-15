@@ -42,13 +42,13 @@ def _extract_sql(text: str) -> str:
 
 
 def _parse_mcp_result(raw) -> dict:
-    """FastMCP returns list of TextContent; parse inner JSON if possible."""
     if isinstance(raw, list) and raw:
         text = raw[0].text if hasattr(raw[0], "text") else str(raw[0])
     else:
         text = str(raw)
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else {"result": parsed}
     except Exception:
         return {"result": text}
 
