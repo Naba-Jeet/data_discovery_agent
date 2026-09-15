@@ -53,17 +53,22 @@ async def nl_to_sql(schema_name: str, question: str) -> str:
     # Get table names for post-processing
     try:
         schema_data = json.loads(schema_json)
+        if not isinstance(schema_data, dict) or "error" in schema_data:
+            raise ValueError("Schema unavailable")
         table_names = list(schema_data.keys())
         context_lines = []
         for table, meta in schema_data.items():
-            if not isinstance(meta, dict):   # ← ADD THIS GUARD
+            if not isinstance(meta, dict):
                 continue
             cols = meta.get("columns", [])
             col_defs = ", ".join(f"{c['name']}({c['type']})" for c in cols)
-            context_lines.append(f"  {schema_name}.{table}: {col_defs}")
+            context_lines.append(f" {schema_name}.{table}: {col_defs}")
         schema_context = "\n".join(context_lines)
-    except Exception:
+    except Exception as e:
+        print(f"WARNING schema parse failed: {e}")
         table_names = []
+        schema_context = "No schema context available."
+        schema_data = {}   # ← CRITICAL: reset so Step 4 doesn't crash
 
     # Step 2: build prompt
     system_prompt = (

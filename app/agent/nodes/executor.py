@@ -1,7 +1,7 @@
 """
 Executor node — calls MCP tools via SSE based on intent.
 """
-import re, json, traceback
+import re, json, traceback, httpx, os
 from unittest import result
 from agent.intent import extract_frequency
 from mcp_client.client import (
@@ -100,11 +100,24 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
             sql = _extract_sql(sql)
             
             if warehouse == "databricks":
+                OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+                OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+                prompt = (
+                    f"Generate a valid SQL SELECT query for Databricks for: {user_message}\n"
+                    "The table name must be used exactly as mentioned by the user (e.g. catalog.schema.table).\n"
+                    "Return ONLY raw SQL. No explanations, no markdown, no code fences."
+                )
+                async with httpx.AsyncClient(timeout=60) as client:
+                    resp = await client.post(f"{OLLAMA_URL}/api/generate", json={
+                        "model": OLLAMA_MODEL,
+                        "prompt": prompt,
+                        "stream": False
+                    })
+                    raw_sql = resp.json().get("response", "").strip()
+                sql = _extract_sql(raw_sql)
                 raw = await run_databricks_query(sql, token=state.get("databricks_token", ""))
-            else:
-                raw = await run_query(sql)
-
-            result = _parse_mcp_result(raw)
+                result = _parse_mcp_result(raw)
+                result["generated_sql"] = sql
             # Normalize if MCP returned a raw list of rows
             if isinstance(result, list):
                 cols = list(result[0].keys()) if result else []
