@@ -87,7 +87,7 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
         sql = _extract_sql(sql)
         
         if warehouse == "databricks":
-            raw = await run_databricks_query(state["sql"], token=state.get("databricks_token", ""))
+            raw = await run_databricks_query(sql, token=state.get("databricks_token", ""))
         else:
             raw = await run_query(state["sql"])
 
@@ -109,7 +109,7 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
     elif intent == "query":
         sql = _extract_sql(user_message)
         if warehouse == "databricks":
-            raw = await run_databricks_query(state["sql"])
+            raw = await run_databricks_query(sql, token=state.get("databricks_token", ""))
         else:
             raw = await run_query(state["sql"])
         result = _parse_mcp_result(raw)
