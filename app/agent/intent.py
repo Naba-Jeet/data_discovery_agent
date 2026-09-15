@@ -19,6 +19,10 @@ _RULES = [
     ("nl_to_sql", r"\b(how many|what is|list|find|give me|top \d+|average|count|sum|total)\b"),
     ("query",     r"\b(run|execute|select|fetch|show me the data)\b"),
     ("schema",    r"\b(schema|columns?|metadata|describe|structure)\b"),
+    ("row_anomaly", r"\b(row.?count|row.?anomaly|frequency|daily|weekly|monthly|quarterly|yearly|period.?count|count.?per|spike|dip|volume.?trend)\b"),
+    (r"explain|why|reason|insight|finding|interpret", "explain_anomaly"),
+    (r"anomal|outlier|spike|unusual|dip",             "anomaly"),
+
 ]
 
 _COMPILED = [(intent, re.compile(pattern, re.IGNORECASE)) for intent, pattern in _RULES]
@@ -39,6 +43,15 @@ _GRAIN_PATTERN = re.compile(
     r'\b(?:by|grain\s+columns?|grain|grouped?\s+by|on\s+columns?)\s+([\w,\s]+?)(?:\s+in|\s+from|\s+table|on\b|$)',
     re.IGNORECASE
 )
+
+_FREQ_PATTERN = re.compile(
+    r"\b(daily|weekly|monthly|quarterly|yearly)\b", re.IGNORECASE
+)
+
+def extract_frequency(text: str) -> str | None:
+    """Extract frequency keyword from user message."""
+    m = _FREQ_PATTERN.search(text)
+    return m.group(1).lower() if m else None
 
 def extract_granularity(user_message: str) -> str:
     """Normalise user granularity hint → day/week/month/quarter."""

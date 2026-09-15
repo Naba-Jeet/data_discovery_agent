@@ -1,0 +1,90 @@
+- .env
+- .gitignore
+- app
+  - agent
+    - intent.py
+    - model_registry.py
+    - nodes
+      - executor.py
+      - explain_node.py
+      - formatter.py
+      - llm.py
+      - rag.py
+      - __init__.py
+    - orchestrator.py
+    - prompt_router.py
+    - __init__.py
+  - api
+    - endpoints
+      - anomaly_column.py
+      - anomaly_timeseries.py
+      - __init__.py
+    - schemas
+      - anomaly_schemas.py
+      - __init__.py
+    - __init__.py
+  - config.py
+  - Dockerfile
+  - main.py
+  - mcp_client
+    - client.py
+    - __init__.py
+  - memory
+    - embeddings.py
+    - store.py
+    - __init__.py
+  - ml
+    - anomaly
+      - isolation_forest.py
+      - stl_decomposition.py
+      - zscore.py
+      - __init__.py
+    - dq
+      - drift_detector.py
+      - __init__.py
+    - explain
+      - llm_explain.py
+    - lineage
+      - graph_builder.py
+      - traversal.py
+      - __init__.py
+    - __init__.py
+  - requirements.txt
+- docker-compose.yaml
+- mcp-server
+  - db
+    - connection.py
+  - Dockerfile
+  - dq
+    - checks
+      - custom_check.py
+      - freshness_check.py
+      - null_check.py
+      - range_check.py
+      - unique_check.py
+      - volume_check.py
+    - connection.py
+    - engine.py
+    - rules.py
+    - store.py
+    - __init__.py
+  - main.py
+  - requirements.txt
+  - test_mcp.py
+  - test_nl_to_sql.py
+  - tools
+    - anomaly_tools.py
+    - databricks_tools.py
+    - dq_tools.py
+    - formatter.py
+    - nl_to_sql.py
+    - query_tools.py
+    - row_anomaly.py
+    - schema_tools.py
+    - volume_anomaly.py
+- ollama
+  - entrypoint.sh
+- README.md
+- storage
+  - vector_db_scripts
+    - pgvectordb_ddl.sql

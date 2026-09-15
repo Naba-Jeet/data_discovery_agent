@@ -100,3 +100,23 @@ async def detect_volume_anomalies(
         "grain_cols":    grain_cols,
         "date_col":      date_col,
     })
+
+async def detect_row_anomaly(
+    schema_name: str,
+    table_name: str,
+    frequency: str,
+    date_column: str = "",
+    lookback_periods: int = 0,
+    threshold_pct: float = 30.0,
+) -> str:
+    return await call_tool("tool_detect_row_anomaly", {
+        "schema_name":      schema_name,
+        "table_name":       table_name,
+        "frequency":        frequency,
+        "date_column":      date_column,
+        "lookback_periods": lookback_periods,
+        "threshold_pct":    threshold_pct,
+    })
+
+async def run_databricks_query(sql: str, limit: int = 100):
+    return await call_tool("tool_query_databricks", {"query": sql, "limit": limit})

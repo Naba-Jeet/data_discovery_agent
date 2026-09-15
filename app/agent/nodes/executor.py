@@ -1,18 +1,23 @@
 """
 Executor node — calls MCP tools via SSE based on intent.
 """
-import re
-import json
+import re, json
+from agent.intent import extract_frequency
 from mcp_client.client import (
     run_query, detect_anomalies, nl_to_sql, get_schema,
     run_dq_checks, add_dq_rule, get_dq_rules,
-    detect_volume_anomalies,
+    detect_volume_anomalies,detect_row_anomaly
 )
 from agent.intent import extract_granularity, extract_threshold, extract_grain_cols
 from typing import Any
 from memory.store import MemoryStore
 from config import MEMORY_DSN
-import re
+from agent.intent import extract_frequency
+
+
+
+
+NO_LLM_INTENTS = {"dq", "schema", "query", "anomaly", "volume_anomaly", "row_anomaly"}
 
 _mem = MemoryStore(MEMORY_DSN)
 
@@ -149,6 +154,22 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
                 grain_cols=grain_cols,
             )
             result = _parse_mcp_result(raw)
+
+    elif intent == "row_anomaly":
+
+        frequency = extract_frequency(state.get("user_message", "")) or "monthly"
+        table     = state.get("target_table", "")
+        schema    = state.get("pg_schema", "public")
+
+        if not table:
+            result = {"error": "No table specified. Please mention a table name."}
+        else:
+            raw = await detect_row_anomaly(
+                schema_name=schema,
+                table_name=table,
+                frequency=frequency,
+            )
+            result = _parse_mcp_result(raw)
     else:
         result = {"info": "No tool execution needed for this intent."}
 
@@ -170,3 +191,4 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
         )
         
     return state
+

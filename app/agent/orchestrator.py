@@ -10,6 +10,8 @@ Flow:
     → formatter_node    (response structuring)
   END
 """
+from asyncio import graph
+from asyncio import graph
 from typing import Any, TypedDict
 
 from langgraph.graph import StateGraph, END
@@ -19,6 +21,7 @@ from agent.nodes.rag import rag_node
 from agent.nodes.llm import llm_node
 from agent.nodes.executor import executor_node
 from agent.nodes.formatter import formatter_node
+from agent.nodes.explain_node import explain_node
 
 
 # ── State schema ─────────────────────────────────────────────────────────────
@@ -47,6 +50,7 @@ async def classify_intent(state: AgentState) -> AgentState:
     return state
 
 
+
 # ── Graph definition ──────────────────────────────────────────────────────────
 
 def build_graph() -> StateGraph:
@@ -59,18 +63,22 @@ def build_graph() -> StateGraph:
     graph.add_node("formatter",       formatter_node)
 
     graph.set_entry_point("classify_intent")
+        # Add node
+    graph.add_node("explain", explain_node)
 
     # Intents that need LLM (Ollama) vs those that go direct to executor
-    NO_LLM_INTENTS = {"dq", "schema", "query", "anomaly"}
+    NO_LLM_INTENTS = {"dq", "schema", "query", "anomaly", "anomaly", "volume_anomaly", "row_anomaly"}
 
     def route_after_rag(state: AgentState) -> str:
         return "executor" if state.get("intent") in NO_LLM_INTENTS else "llm"
-
+    
+    graph.add_edge("explain", "formatter")
     graph.add_edge("classify_intent", "rag")
-    graph.add_conditional_edges("rag", route_after_rag, {"llm": "llm", "executor": "executor"})
+    graph.add_conditional_edges("rag", route_after_rag, {"llm": "llm", "executor": "executor", "explain_anomaly": "explain"})
     graph.add_edge("llm",             "executor")
     graph.add_edge("executor",        "formatter")
     graph.add_edge("formatter",        END)
+    
 
     return graph.compile()
 

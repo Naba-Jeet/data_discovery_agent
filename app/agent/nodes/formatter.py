@@ -86,6 +86,43 @@ def _render_volume_anomaly(tool_result: dict) -> str:
 
     return "\n".join(parts)
 
+
+def _render_row_anomaly(tool_result: dict) -> str:
+    if "error" in tool_result:
+        return f"⚠️ **Error:** {tool_result['error']}"
+
+    meta    = tool_result.get("meta", {})
+    summary = tool_result.get("summary", "")
+    rows    = tool_result.get("result", [])
+
+    lines = []
+    lines.append(f"📊 **Row Count Anomaly — `{meta.get('schema')}.{meta.get('table')}`**")
+    lines.append(
+        f"- Frequency: `{meta.get('frequency')}` | "
+        f"Lookback: `{meta.get('lookback_periods')}` periods | "
+        f"Threshold: `±{meta.get('threshold_pct')}%` | "
+        f"Date col: `{meta.get('date_column')}` *(source: {meta.get('date_column_source')})*"
+    )
+    lines.append(f"\n🔍 **{summary}**\n")
+
+    if rows:
+        lines.append("| Period | Row Count | Rolling Avg | Deviation % | Flag |")
+        lines.append("| --- | --- | --- | --- | --- |")
+        flag_icon = {"SPIKE": "🔺", "DIP": "🔻", "NORMAL": "✅"}
+        for r in rows:
+            icon = flag_icon.get(r.get("flag", "NORMAL"), "")
+            lines.append(
+                f"| {r.get('period')} "
+                f"| {r.get('row_count')} "
+                f"| {r.get('rolling_avg')} "
+                f"| {r.get('deviation_pct')}% "
+                f"| {icon} {r.get('flag')} |"
+            )
+    else:
+        lines.append("_No data returned for the given period._")
+
+    return "\n".join(lines)
+
 async def formatter_node(state: dict[str, Any]) -> dict[str, Any]:
     intent = state.get("intent", "unknown")
     llm_response = state.get("llm_response", "")
@@ -126,6 +163,8 @@ async def formatter_node(state: dict[str, Any]) -> dict[str, Any]:
             elif intent == "volume_anomaly":
                 parts.append(_render_volume_anomaly(tool_result))
 
+            elif intent == "row_anomaly":
+                parts.append(_render_row_anomaly(tool_result))
             else:
                 parts.append(f"\n```json\n{json.dumps(tool_result, indent=2)}\n```")
 
