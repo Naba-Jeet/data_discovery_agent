@@ -86,11 +86,13 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
             if warehouse == "databricks":
                 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
                 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
+                schema_hint = state.get("schema_context", "")
                 prompt = (
-                    f"Generate a valid SQL SELECT query for Databricks for: {user_message}\n"
-                    "The table name must be used exactly as mentioned by the user (e.g. catalog.schema.table).\n"
-                    "Return ONLY raw SQL. No explanations, no markdown, no code fences."
-                )
+                        f"Generate a valid SQL SELECT query for Databricks for: {user_message}\n"
+                        f"{'Use these exact column names from the table: ' + schema_hint if schema_hint else ''}\n"
+                        "The table name must be used exactly as mentioned by the user (e.g. catalog.schema.table).\n"
+                        "Return ONLY raw SQL. No explanations, no markdown, no code fences."
+                    )
                 async with httpx.AsyncClient(timeout=180) as client:
                     resp = await client.post(f"{OLLAMA_URL}/api/generate", json={
                         "model": OLLAMA_MODEL,

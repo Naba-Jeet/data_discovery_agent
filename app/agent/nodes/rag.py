@@ -29,8 +29,42 @@ async def rag_node(state: dict[str, Any]) -> dict[str, Any]:
     schema_context = ""
     similar_sql    = ""
 
-    if warehouse != "postgres":                       # ← ADD THIS GUARD
-        state["schema_context"] = ""
+    if warehouse == "databricks" and tgt_table:
+        parts = tgt_table.split(".")
+        db_schema = parts[-2] if len(parts) >= 2 else "databricks"
+        db_table = parts[-1]
+
+        cached = await _mem.get_schema(db_schema, db_table)
+        if cached:
+            cols = cached.get("columns", [])
+        else:
+            from mcp_client.client import run_databricks_query
+            token = state.get("databricks_token", "")
+            catalog = parts[0] if len(parts) == 3 else "hive_metastore"
+            schema_n = parts[1] if len(parts) == 3 else parts[0]
+            table_n = parts[-1]
+
+            raw = await run_databricks_query(
+                f"DESC TABLE {tgt_table}",
+                token=token
+            )
+            raw_str = _unwrap_mcp(raw)          # ← reuse existing function
+            try:
+                parsed = json.loads(raw_str)
+                rows = parsed.get("rows", parsed) if isinstance(parsed, dict) else parsed
+                cols = [
+                    {"name": r["col_name"], "type": r["data_type"]}
+                    for r in rows
+                    if isinstance(r, dict) and r.get("col_name") and not r["col_name"].startswith("#")
+                ]
+            except Exception:
+                cols = []
+
+            if cols:
+                await _mem.save_schema(db_schema, db_table, {"columns": cols})
+
+        col_str = ", ".join(f"{c['name']} ({c['type']})" for c in cols)
+        state["schema_context"] = f"Table: {tgt_table}\nColumns: {col_str}"
         state["similar_sql"] = ""
         return state
 

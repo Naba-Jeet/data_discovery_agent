@@ -11,7 +11,7 @@ def _sanitize(text: str) -> str:
 def _wrap_query(sql: str, limit: int) -> str:
     sql = sql.strip().rstrip(";")
     # Don't wrap aggregation/analytical queries — subquery breaks alias resolution
-    skip_keywords = ["group by", "order by", "limit", "having", "union", "with "]
+    skip_keywords = ["group by", "order by", "limit", "having", "union", "with ", "describe", "desc ", "show "]
     if any(kw in sql.lower() for kw in skip_keywords):
         return sql
     return f"SELECT * FROM ({sql}) _q LIMIT {limit}"

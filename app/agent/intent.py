@@ -76,8 +76,13 @@ def extract_grain_cols(user_message: str) -> str:
     cols = [c.strip() for c in re.split(r'[,\s]+', raw) if c.strip()]
     return ",".join(cols)
 
-def extract_table(user_message: str) -> str:
-    match = _TABLE_PATTERN.search(user_message)
+def extract_table(message: str) -> str:
+    # Match full dotted table names: catalog.schema.table or schema.table
+    match = re.search(r'\b([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*){1,2})\b', message)
+    if match:
+        return match.group(1)
+    # Fallback: single word after FROM/table/in
+    match = re.search(r'\b(?:from|table|in|of)\s+([a-zA-Z_][a-zA-Z0-9_]*)\b', message, re.IGNORECASE)
     return match.group(1) if match else ""
 
 def classify(user_message: str) -> str:
