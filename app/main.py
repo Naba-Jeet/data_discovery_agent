@@ -30,6 +30,7 @@ class ChatRequest(BaseModel):
     severity: str = "warn"
     warehouse: str = "postgres"
     databricks_token: str = ""
+    explain: bool = False
 
 
 class ChatResponse(BaseModel):
@@ -37,6 +38,7 @@ class ChatResponse(BaseModel):
     final_response: str
     tool_result: dict = {}
     llm_response: str = ""
+    explanation: str = ""
 
 
 class RowAnomalyRequest(BaseModel):
@@ -47,6 +49,7 @@ class RowAnomalyRequest(BaseModel):
     lookback_periods: int   = 0              # 0 = use frequency default
     threshold_pct:    float = 30.0
     username:         str   = "default"
+    explain: bool = False
 
 
 class RowAnomalyResponse(BaseModel):
@@ -55,6 +58,7 @@ class RowAnomalyResponse(BaseModel):
     summary:          str
     result:           list
     session_id:       str = ""
+    explanation: str = ""
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -77,7 +81,8 @@ async def chat(req: ChatRequest):
             parameters=req.parameters,
             severity=req.severity,
             warehouse=req.warehouse,
-            databricks_token=req.databricks_token
+            databricks_token=req.databricks_token,
+            explain=req.explain,           
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -87,6 +92,7 @@ async def chat(req: ChatRequest):
         final_response=state.get("final_response", ""),
         tool_result=state.get("tool_result", {}),
         llm_response=state.get("llm_response", ""),
+        explanation=state.get("explanation", "")
     )
 
 @app.post("/anomaly/row-count", response_model=RowAnomalyResponse)
@@ -110,11 +116,22 @@ async def row_count_anomaly(req: RowAnomalyRequest):
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
 
+    explanation = ""
+    if req.explain and result.get("anomalies_found", 0) > 0:
+        from ml.explain.llm_explain import explain_anomalies
+        explanation = await explain_anomalies({
+            "table": req.table_name,
+            "type": f"Row Count Anomaly ({req.frequency})",
+            "summary": result.get("summary", ""),
+            "anomalies": result.get("result", [])[:5],
+        })
+
     return RowAnomalyResponse(
         meta=result.get("meta", {}),
         anomalies_found=result.get("anomalies_found", 0),
         summary=result.get("summary", ""),
         result=result.get("result", []),
+        explanation=explanation,
     )
 
 if __name__ == "__main__":

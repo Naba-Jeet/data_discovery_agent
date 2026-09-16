@@ -43,6 +43,8 @@ class AgentState(TypedDict, total=False):
     severity: str
     warehouse: str
     databricks_token: str
+    explain: bool          # ← ADD
+    explanation: str       # ← ADD
 
 
 # ── Node wrappers ─────────────────────────────────────────────────────────────
@@ -69,7 +71,7 @@ def build_graph() -> StateGraph:
     graph.add_node("explain", explain_node)
 
     # Intents that need LLM (Ollama) vs those that go direct to executor
-    NO_LLM_INTENTS = {"dq", "schema", "query", "anomaly", "anomaly", "volume_anomaly", "row_anomaly"}
+    NO_LLM_INTENTS = {"dq", "schema", "query", "anomaly", "anomaly", "volume_anomaly", "row_anomaly", "nl_to_sql"}
 
     def route_after_rag(state: AgentState) -> str:
         return "executor" if state.get("intent") in NO_LLM_INTENTS else "llm"
@@ -101,7 +103,8 @@ async def run_agent(
     parameters: str = "{}",
     severity: str = "warn",
     warehouse: str = "postgres",
-    databricks_token: str = ""
+    databricks_token: str = "",
+    explain: bool = False
 ) -> dict[str, Any]:
     """Run the full agent pipeline and return the final state."""
 
@@ -119,7 +122,9 @@ async def run_agent(
         "parameters": parameters,
         "severity": severity,
         "warehouse": warehouse,
-        "databricks_token": databricks_token
+        "databricks_token": databricks_token,
+        "explain": explain,
+        "explanation": "",         # ← ADD
     }
     final_state = await agent_graph.ainvoke(initial_state)
     return final_state

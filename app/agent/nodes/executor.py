@@ -15,6 +15,8 @@ from memory.store import MemoryStore
 from config import MEMORY_DSN
 from agent.intent import extract_frequency
 from mcp_client.client import run_query, run_databricks_query
+from mcp_client.client import nl_to_sql as mcp_nl_to_sql
+from ml.explain.llm_explain import explain_anomalies
 
 
 
@@ -38,7 +40,9 @@ def _extract_granularity(message: str) -> str:
     return "week"  # default
 
 def _extract_sql(text: str) -> str:
-    text = re.sub(r"(?:sql)?", "", text, flags=re.IGNORECASE).strip("`").strip()
+    text = re.sub(r"```(?:sql)?", "", text, flags=re.IGNORECASE)  # fix the regex too
+    text = text.strip("`").strip()
+    text = re.sub(r"\s+", " ", text)  # ← normalize all whitespace/newlines to single space
     return text.rstrip(";").strip()
 
 
@@ -79,26 +83,6 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
 
         elif intent == "nl_to_sql":
             # llm_response is JSON from tool_nl_to_sql → parse generated_sql
-            print("DEBUG llm_response:", llm_response)
-            sql = ""
-            try:
-                parsed = json.loads(llm_response)
-                if isinstance(parsed, dict):
-                    sql = parsed.get("generated_sql", "")
-                    if parsed.get("error"):
-                        state["tool_result"] = {
-                            "error": parsed["error"],
-                            "generated_sql": parsed.get("generated_sql", ""),
-                            "sql": ""
-                        }
-                        return state
-                else:
-                    sql = str(parsed)  # LLM returned plain SQL string
-            except Exception:
-                sql = llm_response
-
-            sql = _extract_sql(sql)
-            
             if warehouse == "databricks":
                 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
                 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
@@ -107,7 +91,7 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
                     "The table name must be used exactly as mentioned by the user (e.g. catalog.schema.table).\n"
                     "Return ONLY raw SQL. No explanations, no markdown, no code fences."
                 )
-                async with httpx.AsyncClient(timeout=60) as client:
+                async with httpx.AsyncClient(timeout=180) as client:
                     resp = await client.post(f"{OLLAMA_URL}/api/generate", json={
                         "model": OLLAMA_MODEL,
                         "prompt": prompt,
@@ -118,19 +102,17 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
                 raw = await run_databricks_query(sql, token=state.get("databricks_token", ""))
                 result = _parse_mcp_result(raw)
                 result["generated_sql"] = sql
-            # Normalize if MCP returned a raw list of rows
-            if isinstance(result, list):
-                cols = list(result[0].keys()) if result else []
-                result = {
-                    "rows": result,
-                    "columns": cols,
-                    "row_count": len(result)
-                }
-
-            result["generated_sql"] = sql
-            print("DEBUG tool_result keys:", result.keys())  # add this
-            print("DEBUG tool_result:", result)               # add this
-            result["generated_sql"] = sql  # carry forward for formatter
+            else:
+                # Postgres: call MCP tool directly
+                raw = await nl_to_sql(pg_schema, user_message)
+                parsed = _parse_mcp_result(raw)
+                sql = parsed.get("generated_sql", "")
+                if sql:
+                    raw2 = await run_query(sql)
+                    result = _parse_mcp_result(raw2)
+                    result["generated_sql"] = sql
+                else:
+                    result = {"error": "Could not generate SQL", "detail": parsed}
 
         elif intent == "query":
             sql = _extract_sql(user_message)
@@ -211,6 +193,22 @@ async def executor_node(state: dict[str, Any]) -> dict[str, Any]:
                 result = _parse_mcp_result(raw)
         else:
             result = {"info": "No tool execution needed for this intent."}
+
+        if state.get("explain") and "error" not in result:
+            
+            table = state.get("target_table", "")
+            explanation = await explain_anomalies({
+                "table": table,
+                "type": intent,
+                "summary": result.get("decomposition_summary") or result.get("summary") or {},
+                "anomalies": (
+                    result.get("anomalies")
+                    or result.get("result")
+                    or result.get("rows")
+                    or []
+                )[:5],
+            })
+            state["explanation"] = explanation
 
         state["tool_result"] = result
 

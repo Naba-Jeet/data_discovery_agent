@@ -8,6 +8,14 @@ def _sanitize(text: str) -> str:
     """Strip all non-ASCII and invisible Unicode characters."""
     return re.sub(r'[^\x20-\x7E]', '', text).strip()
 
+def _wrap_query(sql: str, limit: int) -> str:
+    sql = sql.strip().rstrip(";")
+    # Don't wrap aggregation/analytical queries — subquery breaks alias resolution
+    skip_keywords = ["group by", "order by", "limit", "having", "union", "with "]
+    if any(kw in sql.lower() for kw in skip_keywords):
+        return sql
+    return f"SELECT * FROM ({sql}) _q LIMIT {limit}"
+
 def tool_query_databricks(query: str, token: str, limit: int = 100) -> dict:
     """Execute a read-only SQL query against Databricks SQL Warehouse."""
     clean_query = _sanitize(query).rstrip(";")
@@ -17,7 +25,7 @@ def tool_query_databricks(query: str, token: str, limit: int = 100) -> dict:
 
     print(f"DEBUG host={clean_host!r} path={clean_path!r} query={clean_query!r}")
 
-    wrapped = f"SELECT * FROM ({clean_query}) _q LIMIT {limit}"
+    wrapped = _wrap_query(clean_query, limit)
 
     with sql.connect(
         server_hostname=clean_host,
